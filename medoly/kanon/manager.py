@@ -30,6 +30,17 @@ class InventoryManager(object):
 
         return InventoryManager._current
 
+    @staticmethod
+    def set_instance(mgr):
+        """Set current singleton inventoy manager
+
+        :param InventoryManager mgr: inventoy manager
+        """
+        if isinstance(mgr, InventoryManager):
+            InventoryManager._current = mgr
+        else:
+            raise TypeError("The mgr must be an instance of InventoryManager")
+
     def __init__(self, handlercls=None):
         #: the boot class instances for bootstrap configuration
         self.boots = []
@@ -43,7 +54,7 @@ class InventoryManager(object):
         #: the model class container
         self.models = {}
 
-        #: the data-mapping layer singletio  instance container
+        #: the data-mapping layer singletion  instance container
         self.mappers = {}
 
         #: the thing singleton instance container
@@ -57,7 +68,7 @@ class InventoryManager(object):
 
         self.defalut_handler = handlercls or anthem.Handler
 
-        #: the choco template manger
+        #: the choco template manager
         self.template_mananger = TempateMananger()
 
     def set_app_name(self, name):
