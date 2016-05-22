@@ -14,26 +14,15 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from medoly.kanon import bloom
+from medoly.anthem import Backend
 
-class Pros(object):
 
-    @staticmethod
-    def create(event_name, callbacks, *args, **kw):
-        return Pros(event_name, callbacks, args, kw)
+@bloom("thing")
+class UserThing(object):
 
-    def __json__(self):
-        return {
-            'name': self.event_name,
-            'args': self.args,
-            'kw': self.kw
-        }
+    def __init__(self):
+        self.mapper = Backend('User')
 
-    def run(self):
-        for callback in self.callbacks:
-            callback(*self.args, **self.kw)
-
-    def __init__(self, event_name, callbacks, args, kw):
-        self.callbacks = callbacks
-        self.event_name = event_name
-        self.args = args
-        self.kw = kw
+    def find_by_uid(self, uid):
+        return self.mapper.find_by_uid(uid)

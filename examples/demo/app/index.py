@@ -15,25 +15,11 @@
 # under the License.
 
 
-class Pros(object):
+from medoly import kanon, anthem
 
-    @staticmethod
-    def create(event_name, callbacks, *args, **kw):
-        return Pros(event_name, callbacks, args, kw)
 
-    def __json__(self):
-        return {
-            'name': self.event_name,
-            'args': self.args,
-            'kw': self.kw
-        }
+@kanon.menu("/")
+class Index(anthem.Handler):
 
-    def run(self):
-        for callback in self.callbacks:
-            callback(*self.args, **self.kw)
-
-    def __init__(self, event_name, callbacks, args, kw):
-        self.callbacks = callbacks
-        self.event_name = event_name
-        self.args = args
-        self.kw = kw
+    def get(self):
+        self.render("index.html")

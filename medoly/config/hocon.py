@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2015 Self-Released
+# Copyright 2016 Medoly
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -125,14 +125,8 @@ class HoconValue(MightBeAHoconObject):
     def get_float(self):
         return self._get_by_type(float)
 
-    def get_long(self):
-        return self._get_by_type(long)
-
     def get_int_list(self):
         return [e.get_int() for e in self.get_array()]
-
-    def get_long_list(self):
-        return [e.get_long() for e in self.get_array()]
 
     def get_float_list(self):
         return [e.get_float() for e in self.get_array()]
@@ -232,9 +226,9 @@ class HoconObject(HoconElement, dict):
     def merge(self, obj):
         for k, v in obj.iteritems():
             if k in self:
-                thisItem = self[key]
-                if item.is_object() and v.value.is_object():
-                    thisItems.get_object.merge(v.value.get_object())
+                this_item = self[k]
+                if this_item.is_object() and v.value.is_object():
+                    this_item.get_object.merge(v.value.get_object())
             else:
                 self[k] = v.value
 

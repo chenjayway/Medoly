@@ -15,25 +15,23 @@
 # under the License.
 
 
-class Pros(object):
+from medoly import kanon
+import tornado.ioloop
 
-    @staticmethod
-    def create(event_name, callbacks, *args, **kw):
-        return Pros(event_name, callbacks, args, kw)
 
-    def __json__(self):
-        return {
-            'name': self.event_name,
-            'args': self.args,
-            'kw': self.kw
-        }
+@kanon.menu("/")
+class Index(object):
 
-    def run(self):
-        for callback in self.callbacks:
-            callback(*self.args, **self.kw)
+    def get(self):
+        self.write("Hello World!")
 
-    def __init__(self, event_name, callbacks, args, kw):
-        self.callbacks = callbacks
-        self.event_name = event_name
-        self.args = args
-        self.kw = kw
+
+@kanon.error_page(404)
+def on_not_fonud(req_handler, code, **kw):
+    req_handler.write("Page not found!")
+
+if __name__ == "__main__":
+    kanon.set_debug()
+    app = kanon.chant()
+    app.listen(8888)
+    tornado.ioloop.IOLoop.current().start()

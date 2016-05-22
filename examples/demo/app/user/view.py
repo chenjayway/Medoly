@@ -14,26 +14,23 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from medoly.kanon import menu, Melos
 
-class Pros(object):
 
-    @staticmethod
-    def create(event_name, callbacks, *args, **kw):
-        return Pros(event_name, callbacks, args, kw)
+@menu("/user")
+class UserPage(object):
 
-    def __json__(self):
-        return {
-            'name': self.event_name,
-            'args': self.args,
-            'kw': self.kw
-        }
+    def get(self):
+        uid = int(self.get_argument("uid"))
+        self.render("user_index.html", uid=uid)
 
-    def run(self):
-        for callback in self.callbacks:
-            callback(*self.args, **self.kw)
 
-    def __init__(self, event_name, callbacks, args, kw):
-        self.callbacks = callbacks
-        self.event_name = event_name
-        self.args = args
-        self.kw = kw
+@menu("/user.json")
+class UserJsonPage(object):
+
+    thing = Melos("User")
+
+    def get(self):
+        uid = int(self.get_argument("uid"))
+        user = self.thing.find_by_uid(uid)
+        self.jsonify(user)

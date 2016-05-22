@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2015 Medoly
+# Copyright 2016 Medoly
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -17,30 +17,16 @@
 
 from medoly import kanon
 
-import tornado.ioloop
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 
-class DemoService(object):
-
-    def __init__(self):
-        kanon.set_app_name("Demo")
-        kanon.set_debug()
-        kanon.compose("app")
-        self.app = kanon.chant()
-
-    def startup(self):
-        try:
-            port = 8888
-            host = 'localhost'
-            self.app.listen(port, host)
-            tornado.ioloop.IOLoop.instance().start()
-        except KeyboardInterrupt as e:
-            self.shutdown()
-
-    def shutdown(self):
-        tornado.ioloop.IOLoop.instance().stop()
+@kanon.hook("on_start_request")
+def on_load(req_handler):
+    LOGGER.debug("on load req_handler: %s", req_handler)
 
 
-if __name__ == "__main__":
-
-    DemoService().startup()
+@kanon.error_page(404)
+def not_found(req_handler, code, **kw):
+    req_handler.render("404.html", page_title='Not Found')

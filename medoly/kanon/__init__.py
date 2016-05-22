@@ -1,7 +1,29 @@
+#!/usr/bin/env python
+#
+# Copyright 2016 Medoly
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+
+"""Kanon
+=========
+"""
+
 import os.path
 
 from .manager import InventoryManager
 from . import composer
+from ._kanon import Melos
 
 
 def chant():
@@ -39,16 +61,17 @@ def set_debug():
     log.log_config(InventoryManager.instance().app_name, True)
 
 
-def inventory_mgr():
+def inventory_manager():
+    """Get the current kanon inventory manager"""
     return InventoryManager.instance()
 
 
 def compose(module, include_template=True):
-    """Scan the module including all sub modules. 
+    """Scan the module including all sub modules.
     check the template path ``template``, if exists, will add it in the template engine paths
 
     :param module: the python dot module string.
-    :param inclue_template: if the module is a diretory and the value is true. it will add the template path,
+    :param include_template: if the module is a diretory and the value is true. it will add the template path,
             if exist the sub diretory named "template".
     """
     module_infso, is_path, package = composer.scan_submodules(module)
@@ -85,45 +108,19 @@ def menu(url_spec, settings=None, name=None, render=None):
 def route(prefix_url=''):
 
     def __route(f):
-        c = Connetor(prefix_url, InventoryManager.instance())
+        c = composer.Connetor(prefix_url, InventoryManager.instance())
         f(c)
         return f
     return __route
 
 
-class Connetor(object):
-    """Route menu processor
-
-        :param prefix_path: the url route path prefix
-        :type prefix_path: stirng
-        :param mgr: the inventory manager for adding routes
-        :type mgr:  InventoryManager
-    """
-
-    def __init__(self, prefix_path, mgr):
-
-        self.prefix_path = prefix_path
-        self.mgr = mgr
-
-    def __enter__(self):
-        return self
-
-    def connect(self, url_spec, *args, **kw):
-        """Added a url route handler
-
-        :param url_spec: the url path or URLSpec
-        :type url_spec: string|url
-        :param args:  the more args for  route
-        :param kw: the more settings for route confinguration
-        """
-        self.autoload.add_menu(self.prefix_path + url_spec, *args, **kw)
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
-
-
 def bloom(inventory_name, alias=None):
     """Bind the inventory"""
+
+    # check the inventory name validation
+    if inventory_name not in ['model', 'thing', 'mapper']:
+        raise KeyError("Kanon doesn't have the inventory stragery for ``{}``".format(inventory_name))
+
     def _bloom(inventory):
         kclass_name = inventory.__name__
         if inventory_name == "thing":
@@ -161,3 +158,15 @@ def bloom(inventory_name, alias=None):
 
         return inventory
     return _bloom
+
+
+def chord(name=None, **settings):
+    """Add a chord"""
+
+    def _chord(inventory):
+        kclass_name = inventory.__name__
+        if name and name.strip():
+            kclass_name = name.strip()
+        InventoryManager.instance().put_chord(kclass_name, inventory, **settings)
+        return inventory
+    return _chord

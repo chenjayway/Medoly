@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2015 Self-Released
+# Copyright 2016 Medoly
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -14,7 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-
 """Human-Optimized Config Object Notation
 """
 
@@ -23,11 +22,33 @@ from copy import deepcopy
 
 
 class SelectConfig(object):
+    """Select dict configuration tool
+
+      Example:
+
+        >>> conf = SelectConfig()
+        >>> conf.set("db.host", "localhost")
+        >>> conf.get("db")
+        ...       {"host": "localhost"}
+        >>> conf.get("db.host")
+        ...     "localhost"
+
+    :param config: the default dict namnesapce for config, defaults to None
+    :type config: dict, optional
+    """
 
     def __init__(self, config=None):
-        self._config = config or {}
+        self._config = config or dict()
 
     def set(self, key, value):
+        """Set a chain key  value
+
+
+
+        :param key: the config chain key with dot split, like "db.host", "host"
+        :type key: string
+        :param value: the value for key store
+        """
         keys = self._keys(key)
         config = self._config
         i = 0
@@ -47,6 +68,13 @@ class SelectConfig(object):
         config[last_key] = value
 
     def get(self, key=None, default=None):
+        """Get the chain key value, if not fond returns the default value
+
+        :param key: the key. defaults to None, returns the root config.
+        :type key: string, optional
+        :param default: the default value when not found the key, defaults to None
+        :returns: the value for the chain key
+        """
         keys = self._keys(key)
         config = self._config
         for k in keys:
@@ -59,6 +87,7 @@ class SelectConfig(object):
         return config
 
     def delete(self, key):
+        """Remove the key config from the current config"""
         keys = self._keys(key)
         if len(keys) == 2:
             v = self.get(keys[0])
@@ -72,6 +101,7 @@ class SelectConfig(object):
             self.set(k, v)
 
     def __contains__(self, key):
+        """Check a key in the config"""
         keys = self._keys(key)
         contains = True
         config = self._config
@@ -85,6 +115,7 @@ class SelectConfig(object):
         return contains
 
     def _keys(self, key):
+        """Split the dot chain key to list"""
         return key.split('.')
 
     def __json__(self):
@@ -170,12 +201,6 @@ class Config(BaseConfig):
             return default
         return value.get_int()
 
-    def get_long(self, path, default=0):
-        value = self.get_node(path)
-        if value is None:
-            return default
-        return value.getLong()
-
     def get(self, path, default=None):
         value = self.get_node(path)
         if value is None:
@@ -209,11 +234,6 @@ class Config(BaseConfig):
         value = self.get_node(path)
 
         return value.get_list()
-
-    def get_long_list(self, path):
-        value = self.get_node(path)
-
-        return value.get_long_list()
 
     def get_value(self, path):
         return self.get_node(path)

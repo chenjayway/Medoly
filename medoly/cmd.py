@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2015 Medoly
+# Copyright 2016 Medoly
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -62,18 +62,14 @@ class Cmd(object):
         opt.define('-c', '--config', default=self.confing_path,
                    help="config path (default %(default)r)", metavar="FILE")
         o = opt.parse_args(sys.argv)
-        if os.path.exists(o.config):
-            config = ConfigFactory.parse_file(o.config, pystyle=True)
-            return config
-        else:
-            # Return default
-            return {}
+        return config_from_file(o.config, False)
 
-    def parse_cmd(self, help_doc, boots):
+    def parse_cmd(self, help_doc, boots, config=None):
         """Parse config and setting config for the terminal options
 
         :param string help_doc: The OptionPaser help doc
-        "param boots:  the boot  instances options
+        :param boots:  the boot  instances options
+        :param config:  if config  is not ``None``, it will use current config, otherwise create a new one.
 
         Returns:
             SelectConfig --  the dict like config
@@ -83,7 +79,8 @@ class Cmd(object):
 
         self._set_defaults(boots)
         opt = self.options.parse_args()
-        config = SelectConfig()
+        if not config:
+            config = SelectConfig()
         config.update(vars(opt))
         return config
 
@@ -109,3 +106,19 @@ class Cmd(object):
             if v != _Null:
                 d[k] = v
         self.options.set_defaults(**d)
+
+
+def config_from_file(path, select_config=True):
+    """Load config form file
+
+    If config path exist try to load and parse the config the file, else returns a empty config
+    """
+    if os.path.exists(path):
+        config = ConfigFactory.parse_file(path, pystyle=True)
+        # if ``True`` returns a SelectCofnig
+        if select_config:
+            return config.to_select_config()
+        return config
+    else:
+        # Return default
+        return {}
