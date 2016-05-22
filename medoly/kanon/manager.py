@@ -15,11 +15,11 @@
 # under the License.
 
 import os.path
-import re
 import logging
 from medoly import anthem
 from medoly.config import SelectConfig
 
+from tornado.web import RequestHandler
 
 from ._kanon import Melos
 
@@ -87,10 +87,15 @@ class InventoryManager(object):
         #: the application name
         self.app_name = "Medoly"
 
+        if handlercls and not issubclass(handlercls, RequestHandler):
+            raise TypeError("Must be a subclass of RequestHandler: {0}".format(handlercls.__name__))
         self.defalut_handler = handlercls or anthem.Handler
 
         #: the choco template manager
         self.template_mananger = template_mananger or TempateMananger()
+
+        #: the custom chords
+        self.chords = {}
 
     def set_app_name(self, name):
         """Set application name"""
@@ -113,6 +118,7 @@ class InventoryManager(object):
         self.mount_model()
         self.mount_mapper()
         self.mount_thing()
+        self.mount_chord()
         self.mount_menu()
         return self.create_app()
 
@@ -179,31 +185,55 @@ class InventoryManager(object):
 
         return settings
 
+    def put_chord(self, chord_name, chord_class, **settings):
+        """Added a chord"""
+        LOGGER.debug("Putting chord:{%s -> %r}", chord_name, chord_class)
+        if chord_name in self.chords:
+            raise InventoryExistError("chord for ```{}`` exists.".format(chord_name))
+        self.chords[chord_name] = (chord_class, settings)
+
     def put_ui(self, ui_name, uicls):
+        """Added a ui"""
+        LOGGER.debug("Putting ui:{%s -> %r}", ui_name, uicls)
+        if ui_name in self.template_mananger.uis:
+            raise InventoryExistError("UI for ```{}`` exists.".format(ui_name))
         if not issubclass(uicls, UIModule):
             classes = [UIModule] + self.get_class_bases(uicls)
             uicls = type(uicls.__name__, tuple(classes), dict(uicls.__dict__))
 
-        LOGGER.debug("Putting ui:{%s -> %r}", ui_name, uicls)
         self.template_mananger.put_ui(ui_name, uicls)
 
     def put_boot(self, boot):
+        """Add a boot config"""
         LOGGER.debug("Puting boot:%s", boot.__name__)
         self.boots.append(boot)
 
     def put_model(self, name, model):
+        """Add a model"""
         LOGGER.debug("Puting model:{%s -> %r}", name, model)
+        if name in self.models:
+            raise InventoryExistError("Model for ```{}`` exists.".format(name))
+
         self.models[name] = model
 
     def put_mapper(self, name, mapper):
+        """Add a mapper"""
         LOGGER.debug("Puting mapper:{%s -> %r}", name, mapper)
+        if name in self.mappers:
+            raise InventoryExistError("Backend for ```{}`` exists.".format(name))
+
         self.mappers[name] = mapper
 
     def put_thing(self, name, thing):
+        """Add a thing"""
         LOGGER.debug("Puting thing:{%s -> %r}", name, thing)
+        if name in self.things:
+            raise InventoryExistError("Thing for ```{}`` exists.".format(name))
+
         self.things[name] = thing
 
     def add_template_path(self, template_path):
+        """Added a template path in template manager"""
         LOGGER.debug("Adding template path: '%s'", template_path)
         self.template_mananger.add_template_path(template_path)
         ui_path = os.path.join(template_path, "ui")
@@ -212,12 +242,29 @@ class InventoryManager(object):
             self.template_mananger.add_ui_path(ui_path)
 
     def add_route(self, url_spec, handler=None, settings=None, name=None, render=None):
+        """Add a url route"""
         self.menus.append(Menu(url_spec, handler, settings, name, render))
 
+    def mount_chord(self):
+        """Registe the melos for  the  chord class"""
+
+        for chord_name in self.chords:
+            chord, settings = self.chords.get(chord_name)
+            self.load_meloes(chord)
+            bean = settings.get('bean')
+            if bean:
+                self.chords[chord_name] = chord()
+            else:
+                self.chords[chord_name] = chord
+
+        setattr(anthem.handler, "__chord", self.chords)
+
     def mount_model(self):
+        """Sets Model"""
         setattr(anthem.handler, '__model', self.models)
 
     def mount_mapper(self):
+        """Initailize and regiest the backend"""
         mappers = {}
         for mapper_name in self.mappers:
             mapper = self.mappers.get(mapper_name)
@@ -227,6 +274,7 @@ class InventoryManager(object):
         setattr(anthem.handler, '__backend', mappers)
 
     def mount_thing(self):
+        """Initailize and regiest the thing"""
         things = {}
         for thing_name in self.things:
             thing = self.things.get(thing_name)
@@ -236,11 +284,24 @@ class InventoryManager(object):
         setattr(anthem.handler, '__thing', things)
 
     def mount_menu(self):
+        """Intialize the url routes and handlers"""
         for menu in self.menus:
             self.connect(menu.url_spec, menu.handler,
                          menu.settings, menu.name, menu.render)
 
     def connect(self, url_spec, handler=None, settings=None, name=None, render=None):
+        """Add a route 
+
+         if render is ``true``,  it is a simple template request handler.
+
+        :param url_spec: the url path
+        :type url_spec: url
+        :param handler:  the handler class, defaults using the manager ``default_hander``
+        :param settings: the default intailize setting for handler, Optional.
+        :param render: the render template path
+        :type render: string, optional
+        :raises: ValueError
+        """
 
         #: if render is ``true``,  it is a simple template request handler
         if render:
@@ -254,7 +315,7 @@ class InventoryManager(object):
         self.load_meloes(handler)
 
         #: check inhert handler class, if not, inject the default handler class
-        if not issubclass(handler, self.defalut_handler):
+        if not issubclass(handler, RequestHandler):
             classes = [self.defalut_handler] + self.get_class_bases(handler)
             handler = type(handler.__name__, tuple(
                 classes), dict(handler.__dict__))
@@ -301,6 +362,13 @@ class InventoryManager(object):
             return self.mappers.get(melos.name)
         elif melos.genre == "model":
             return self.models.get(melos.name)
+        elif melos.genre == "chord":
+            return self.chords.get(melos.name)
+
+
+class InventoryExistError(Exception):
+    """Invenort exist exception"""
+    pass
 
 
 class Menu(object):
@@ -336,7 +404,7 @@ class TempateMananger(object):
     def __init__(self):
         self.template_paths = []
         self.ui_paths = []
-        self.uis = []
+        self.uis = {}
 
     def is_valid(self):
         """Check the template is empty"""
@@ -351,7 +419,7 @@ class TempateMananger(object):
         ui_container = UIContainer(self.ui_paths)
 
         # load ui and bind mapper or thing
-        for name, uicls in self.uis:
+        for name, uicls in self.uis.items():
             mgr.load_meloes(uicls)
             ui_container.put_ui(name, uicls)
         return anthem.ChocoTemplateLoader(self.template_paths, ui_container=ui_container,
@@ -369,7 +437,7 @@ class TempateMananger(object):
         :param string ui_name: ui template name
         :param uicls: UI Module class instance
         """
-        self.uis.append((ui_name, uicls))
+        self.uis[ui_name] = uicls
 
     def add_template_path(self, template_path):
         """Add  tempate path to head"""
